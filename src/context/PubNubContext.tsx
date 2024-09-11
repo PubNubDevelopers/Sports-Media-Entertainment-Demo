@@ -423,10 +423,10 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
         }
 
         // Store video sync data if available
-        if (parsedData.videoSyncTime) {
-          const { videoStartTimeInSeconds, videoEndTimeInSeconds } = parsedData.videoSyncTime;
-          setVideoSyncData({ startTimeInSeconds: videoStartTimeInSeconds, endTimeInSeconds: videoEndTimeInSeconds });
-        }
+        // if (parsedData.videoSyncTime) {
+        //   const { videoStartTimeInSeconds, videoEndTimeInSeconds } = parsedData.videoSyncTime;
+        //   setVideoSyncData({ startTimeInSeconds: videoStartTimeInSeconds, endTimeInSeconds: videoEndTimeInSeconds });
+        // }
 
         if(parsedData.play) updatePlayStates(parsedData.play);
 

@@ -7,10 +7,8 @@ const simulateGame = async (channel) => {
   const homeID = gameData['Game']['HomeTeamID'];
   const awayID = gameData['Game']['AwayTeamID'];
 
-  const syncDuration = 1700;
-  const timeoutDuration = 1700;
-
-  // console.log(`Team IDs: ${homeID} vs ${awayID}`);
+  const syncDuration = 1000;
+  const timeoutDuration = 1000;
 
   let gameState = {};
   let simulatedElapsedTime = 0;
@@ -28,9 +26,6 @@ const simulateGame = async (channel) => {
           newGameState.threePoints[play['TeamID'] == homeID ? 'home' : 'visitor'] += 1;
         }
         break;
-      case 'FreeThrowMade':
-        newGameState.freeThrows[play['TeamID'] == homeID ? 'home' : 'visitor'] += 1;
-        break;
       case 'Timeout':
         newGameState.timeouts[play['TeamID'] == homeID ? 'home' : 'visitor'] += 1;
         break;
@@ -47,17 +42,7 @@ const simulateGame = async (channel) => {
     }
 
     return newGameState;
-  }
-
-  const calculateVideoSyncTime = (play) => {
-    if (play.videoStartMinutes !== undefined && play.videoStartSeconds !== undefined) {
-      const videoStartTimeInSeconds = parseInt(play.videoStartMinutes) * 60 + parseInt(play.videoStartSeconds);
-      const videoEndTimeInSeconds = play.videoEndMinutes ? (parseInt(play.videoEndMinutes) * 60 + parseInt(play.videoEndSeconds)) : null;
-
-      return { videoStartTimeInSeconds, videoEndTimeInSeconds };
-    }
-    return null;
-  }
+  };
 
   while (true) {
     gameState = {
@@ -79,81 +64,36 @@ const simulateGame = async (channel) => {
       twoPoints: {
         home: 0,
         visitor: 0
-      },
-      freeThrows: {
-        home: 0,
-        visitor: 0
-      },
+      }
     };
 
     simulatedElapsedTime = 0;
 
     for (let i = 0; i < plays.length; i++) {
       const play = plays[i];
-      const playTimeRemaining = (play['TimeRemainingMinutes'] * 60) + play['TimeRemainingSeconds'];
+      // const playTimeRemaining = (play['TimeRemainingMinutes'] * 60) + play['TimeRemainingSeconds'];
 
-      const videoSyncTime = calculateVideoSyncTime(play);
+      const message = {
+        play,
+        gameState,
+        simulatedElapsedTime
+      };
+      await sendMessage(channel, message);
 
-      if (videoSyncTime) {
-        const message = {
-          play,
-          gameState,
-          simulatedElapsedTime,
-          videoSyncTime
-        };
+      gameState = updateGameState(gameState, play);
 
-        await sendMessage(channel, message);
+      if (i < plays.length - 1) {
+        const nextPlay = plays[i + 1];
 
-        const syncDuration = videoSyncTime.videoEndTimeInSeconds - videoSyncTime.videoStartTimeInSeconds;
+        const currentPlayTimeInSeconds = (play['videoTimeMinutes'] * 60) + play['videoTimeSeconds'];
+        const nextPlayTimeInSeconds = (nextPlay['videoTimeMinutes'] * 60) + nextPlay['videoTimeSeconds'];
 
-        let freeThrowPoints = 0;
-        while (i < plays.length - 1) {
-          const nextPlay = plays[i + 1];
-          const nextPlayTimeRemaining = (nextPlay['TimeRemainingMinutes'] * 60) + nextPlay['TimeRemainingSeconds'];
+        // Calculate the delay between current play and the next play
+        const delayBetweenPlays = nextPlayTimeInSeconds - currentPlayTimeInSeconds;
 
-          if (nextPlayTimeRemaining !== playTimeRemaining) {
-            break;
-          }
+        simulatedElapsedTime += delayBetweenPlays;
 
-          if (nextPlay.Type === 'FreeThrowMade') {
-            freeThrowPoints += nextPlay.Points;
-            gameState = updateGameState(gameState, nextPlay);
-          }
-
-          i++;
-        }
-
-        if (freeThrowPoints > 0) {
-          const freeThrowMessage = {
-            gameState,
-            updateType: 'FreeThrowsProcessed',
-            points: freeThrowPoints
-          };
-          await sendMessage(channel, freeThrowMessage);
-        }
-
-        await PromiseTimeout((syncDuration) * syncDuration);
-      } else {
-        gameState = updateGameState(gameState, play);
-
-        const message = {
-          play,
-          gameState,
-          simulatedElapsedTime
-        };
-
-        await sendMessage(channel, message);
-
-        if (i < plays.length - 1) {
-          const nextPlay = plays[i + 1];
-          const nextPlayTimeRemaining = (nextPlay ? (nextPlay['TimeRemainingMinutes'] * 60) + nextPlay['TimeRemainingSeconds'] : 0);
-
-          const differenceInSeconds = playTimeRemaining - nextPlayTimeRemaining;
-
-          simulatedElapsedTime += differenceInSeconds;
-
-          await PromiseTimeout(differenceInSeconds * syncDuration);
-        }
+        await PromiseTimeout(delayBetweenPlays * syncDuration);
       }
     }
 
@@ -166,6 +106,6 @@ const simulateGame = async (channel) => {
     await PromiseTimeout(2 * 60 * timeoutDuration);
     // After intermission, reset `i` to start the game again
   }
-}
+};
 
 module.exports = { simulateGame };
