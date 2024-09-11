@@ -1,7 +1,7 @@
 "use client"
 
 import { Channel, Chat, Message, User } from "@pubnub/chat";
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useRef, useState } from "react";
 
 // Define the type for PollResults
 type PollResults = {
@@ -16,6 +16,32 @@ type Trivia = {
   answers: string[]
 }
 
+type NotificationType = 'coupon' | 'gameStart' | 'communityTraffic' | 'gameResult';
+
+type Notification = {
+  id: number;
+  type: NotificationType;
+  isNew: boolean;
+  percentageOff?: number;
+  teams?: { home: string; away: string };
+  communityName?: string;
+  communityCount?: number;
+  winningTeam?: 'Brooklyn Nets' | 'Orlando Magic' | 'Tie';
+};
+
+interface CustomData {
+  balance?: number;
+  bets?: string;
+  coupon?: number;
+}
+
+// Define bet details
+type BetDetails = {
+  team: "Home" | "Away";
+  amount: number;
+  odds: number;
+  completed?: boolean; // To mark a bet as completed
+};
 export interface PubNubType {
   chat: Chat | undefined;
   user: User | undefined;
@@ -31,6 +57,7 @@ export interface PubNubType {
   sportsBookData: { [key: string]: any },
   activeChannel: Channel | undefined,
   yourCommunities: Channel[],
+  notifications: Notification[],
   createUser: (username: string, profileImg: string) => Promise<void>;
   createChannel: (id: string) => Promise<void>;
   createPollChannel: (id: string) => Promise<void>;
@@ -43,20 +70,12 @@ export interface PubNubType {
   subscribeToGame: (id: string) => Promise<void>;
   subscribeToPoll: (id: string) => Promise<void>;
   subscribeToBetting: (id: string) => Promise<void>;
-  subscribeToCoupon: (id: string) => Promise<void>;
   submitPollResult: (vote: "Home" | "Away" | "Tie") => Promise<void>;
   placeBet: (betDetails: BetDetails, coupon: boolean) => Promise<void>;
   setActiveChannel: React.Dispatch<React.SetStateAction<Channel | undefined>>,
-  getCommunities: () => Promise<void>
+  getCommunities: () => Promise<void>,
+  markAsRead: (ids: number[]) => void
 }
-
-// Define bet details
-type BetDetails = {
-  team: "Home" | "Away";
-  amount: number;
-  odds: number;
-  completed?: boolean; // To mark a bet as completed
-};
 
 export const PubNubConext = React.createContext<PubNubType | null>(null);
 
@@ -80,10 +99,12 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
   const [videoSyncData, setVideoSyncData] = useState<{startTimeInSeconds: number, endTimeInSeconds: number} | null>(null);
   const [sportsBookData, setSportsBookData] = useState<{[key: string]: any}>({});
   const [activeChannel, setActiveChannel] = useState<Channel | undefined>(channel);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const userRef = useRef(user);
+  const playByPlayRef = useRef(playbyplayState);
 
   // Initialize PubNub chat and set the user balance
   const initChat = async () => {
-    console.log("INIT CHAT RUNS");
     const userId = `user_${Math.floor(Math.random() * 1000)}_${Date.now()}`;
     try {
       const chat = await Chat.init({
@@ -92,23 +113,38 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
         userId: userId,
         typingTimeout: 5000,
         storeUserActivityTimestamps: true,
-        storeUserActivityInterval: 300000 /* 5 minutes */,
+        storeUserActivityInterval: 300000, // 5 minutes
       });
 
       setChat(chat);
       let currentUser = chat.currentUser;
 
-      // Set initial user balance if not already set
-      if (!currentUser.custom?.balance) {
-        currentUser = await chat.currentUser.update({
-          custom: { balance: 250, bets: JSON.stringify([]), coupon: 1.0 } // Initialize balance and bets in the custom field
-        });
-        setUser(currentUser); // Update user state with the new balance
-      } else {
-        setUser(currentUser);
+      // Initialize custom properties if they don't exist
+      const customData: CustomData = currentUser.custom || {}; // Ensure it's typed as CustomData
+      const updates: CustomData = {};
+
+      if (customData.balance === undefined) {
+        updates.balance = 250;
       }
+
+      if (customData.bets === undefined) {
+        updates.bets = JSON.stringify([]);
+      }
+
+      if (customData.coupon === undefined) {
+        updates.coupon = 1.0;
+      }
+
+      // Only update if there are missing fields
+      if (Object.keys(updates).length > 0) {
+        currentUser = await chat.currentUser.update({
+          custom: { ...customData, ...updates }, // Merge existing custom data with the new updates
+        });
+      }
+
+      console.log("RUNNING SET USER 143");
+      setUser(currentUser); // Update user state
     } catch (e) {
-      console.log(e);
       console.error("Failed to initialize PubNub:", e);
     }
   };
@@ -131,6 +167,7 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
       console.log("Failed to updated user: ", e);
     }
 
+    console.log("RUNNING SET USER 168");
     setUser(newUser);
   }
 
@@ -194,7 +231,9 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
       "poll-play-by-play-nets-magic-test",
       "betting-play-by-play-nets-magic",
       "play-by-play-nets-magic",
-      "poll-play-by-play-nets-magic"
+      "poll-play-by-play-nets-magic",
+      "Orlando_Magic_Coupon",
+      "Brooklyn_Nets_Coupon"
     ];
 
     try {
@@ -216,7 +255,7 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
     id: string,
     name: string,
     description: string,
-    trivia?: Trivia // Make trivia optional with "?" syntax
+    trivia?: Trivia
   ): Promise<Channel | undefined> => {
 
     if (chat === undefined) {
@@ -226,6 +265,9 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
     let channel: Channel | undefined;
 
     try {
+      // Replace spaces with underscores in the channel name
+      const sanatizedID = id.replace(/\s+/g, "_");
+
       // Create the custom data object
       const customData: { user: string; trivia_question?: string; trivia_answers?: string } = {
         user: chat.currentUser.id,
@@ -237,9 +279,9 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
         customData.trivia_answers = trivia.answers.join(", "); // Store answers as a comma-separated string
       }
 
-      // Create the channel with the provided data
+      // Create the channel with the sanitized name and provided data
       channel = await chat.createPublicConversation({
-        channelId: id,
+        channelId: sanatizedID,
         channelData: {
           name: name,
           description: description,
@@ -303,7 +345,7 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
   }
 
   const subscribeToCoupon = async (id: string) => {
-    if(!chat) return;
+    if (!chat) return;
 
     let couponChannel: Channel | null;
 
@@ -311,9 +353,6 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
 
     couponChannel.join(async (message: Message) => {
       try {
-        console.log("Coupon message content");
-        console.log(message.content.text);
-
         let discount: number;
 
         /// Find out which discount you should get on your next bet
@@ -332,20 +371,27 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
             break;
         }
 
-        // Update the user's balance and bets in user.custom
-      const updatedUser = await chat.currentUser.update({
-        custom: {
-          balance: user?.custom.balance,
-          bets: user?.custom.bets,
-          coupon: discount
-        },
-      });
-      }
-      catch(e){
+        // Use userRef.current to ensure we have the latest user state
+        const updatedUser = await chat.currentUser.update({
+          custom: {
+            balance: userRef.current?.custom.balance,
+            bets: userRef.current?.custom.bets,
+            coupon: discount,
+          },
+        });
+
+        console.log("RUNNING SET USER 378");
+        setUser(updatedUser);
+        addNotification({
+          type: 'coupon',
+          percentageOff: (1 - discount) * 100, // Calculate the discount percentage
+          isNew: true, // Mark the notification as new
+        });
+      } catch (e) {
         console.log(e);
       }
     });
-  }
+  };
 
   const subscribeToGame = async (id: string) => {
     if (!chat) return;
@@ -355,12 +401,9 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
     gameChannel = await getChannel(id);
 
     gameChannel.join(async (message: Message) => {
-      console.log("Messaged received");
       try {
         const messageContent = message.content.text;
         const parsedData = JSON.parse(messageContent);
-
-        console.log(parsedData);
 
         if (parsedData.restart) {
           await calculateResults()
@@ -370,8 +413,13 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
           await promiseTimeout(3000);
           return;
         }
-        else if(!isIntermission){
+        else if(isIntermission){
           setIsIntermission(false);
+          addNotification({
+            type: 'gameStart',
+            teams: { home: 'Orlando Magic', away: 'Brooklyn Nets' },
+            isNew: true, // Add isNew manually
+          });
         }
 
         // Store video sync data if available
@@ -380,7 +428,8 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
           setVideoSyncData({ startTimeInSeconds: videoStartTimeInSeconds, endTimeInSeconds: videoEndTimeInSeconds });
         }
 
-        updatePlayStates(parsedData.play);
+        if(parsedData.play) updatePlayStates(parsedData.play);
+
         setGameState(parsedData.gameState);
       } catch (error) {
         console.error("Failed to parse message content:", error);
@@ -434,11 +483,16 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
 
   const submitPollResult = async (vote: "Home" | "Away" | "Tie") => {
     if (!pollChannel) return;
+
+    const orlandoMagicCouponChannel = "Orlando_Magic_Coupon";
+    const brooklynNetsCouponChannel = "Brooklyn_Nets_Coupon";
+
     try {
       const message = vote;
       await pollChannel.sendText(message, {
         storeInHistory: true,
       });
+      await subscribeToCoupon(vote === "Home" ? orlandoMagicCouponChannel : brooklynNetsCouponChannel);
     } catch (error) {
       console.error("Failed to submit poll result:", error);
     }
@@ -496,7 +550,7 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
 
     var betDetailsAmount = betDetails.amount;
 
-    if(coupon){
+    if (coupon) {
       betDetailsAmount *= user.custom?.coupon ?? 1.0;
     }
 
@@ -507,11 +561,14 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
     }
 
     try {
-      // Subtract the bet amount from the user's balance
-      const newBalance = currentBalance - betDetailsAmount;
+      // Fetch the latest user.custom to ensure we are using the most up-to-date data
+      const updatedUserBeforeBet = user; // <-- Fetch latest user state
+      const currentBets = updatedUserBeforeBet.custom?.bets
+        ? JSON.parse(updatedUserBeforeBet.custom.bets)
+        : [];
 
-      // Retrieve and update the bets from user.custom
-      const currentBets = user.custom?.bets ? JSON.parse(user.custom.bets) : [];
+      // Subtract the bet amount from the user's balance
+      const newBalance = updatedUserBeforeBet.custom?.balance - betDetailsAmount;
 
       // Add the new bet to the array
       const updatedBets = [...currentBets, betDetails];
@@ -521,10 +578,12 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
         custom: {
           balance: newBalance,
           bets: JSON.stringify(updatedBets),
-          coupon: coupon ? 1.0 : user.custom?.coupon
+          coupon: coupon ? 1.0 : updatedUserBeforeBet.custom?.coupon, // Reset coupon if used
         },
       });
 
+      console.log("RUNNING SET USER 578");
+      console.log(updatedUser.custom.bets);
       // Update the user state with the new data
       setUser(updatedUser);
     } catch (error) {
@@ -534,40 +593,62 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
 
   // Calculate results when the game reaches intermission and mark bets as completed
   const calculateResults = async () => {
-    if (!playbyplayState.length || !user || !chat) return;
+    if (!chat || !user) return;
 
-    const lastPlay = playbyplayState[playbyplayState.length - 1] || {};
+    const lastPlay = playByPlayRef.current[playByPlayRef.current.length - 1] || {};
     const homeScore = lastPlay.HomeTeamScore || 0;
     const awayScore = lastPlay.AwayTeamScore || 0;
 
-    let updatedUser = user;
+    let updatedUser = userRef.current;
     const currentBets = JSON.parse(updatedUser?.custom?.bets || '[]') as BetDetails[];
-    let currentBalance = user?.custom?.balance || 250;
+    let currentBalance = userRef.current?.custom?.balance || 250;
 
     // Loop through each bet and calculate if the user won or lost
     const updatedBets = currentBets.map((bet: BetDetails) => {
-      if (!bet.completed) {
-        if (
-          (bet.team === "Home" && homeScore > awayScore) ||
-          (bet.team === "Away" && awayScore > homeScore)
-        ) {
-          // User wins, calculate return based on odds
-          const potentialReturn = bet.amount * (bet.odds > 0 ? 1 + bet.odds / 100 : 1 - 100 / bet.odds);
-          currentBalance += potentialReturn;
-        }
-        // Mark the bet as completed
-        return { ...bet, completed: true };
+      if (
+        (bet.team === "Home" && homeScore > awayScore) ||
+        (bet.team === "Away" && awayScore > homeScore)
+      ) {
+        // User wins, calculate return based on odds
+        const potentialReturn = bet.amount * (bet.odds > 0 ? 1 + bet.odds / 100 : 1 - 100 / bet.odds);
+        currentBalance += potentialReturn;
       }
-      return bet;
+      // Mark the bet as completed
+      return { ...bet, completed: true };
     });
 
-    // Update user balance and store the updated bets in user.custom
-    updatedUser = await chat.currentUser.update({
-      custom: { balance: currentBalance, bets: JSON.stringify(updatedBets) },
-    });
+    try{
+      // Update user balance and store the updated bets in user.custom
+      updatedUser = await chat.currentUser.update({
+        custom: { balance: currentBalance, bets: JSON.stringify(updatedBets), coupon: userRef.current?.custom?.coupon },
+      });
+    }
+    catch(e){
+      console.log("Failed to update user in calulate results function:", e);
+    }
 
     // Update the user state with the new data
+    console.log("RUNNING SET USER 620");
     setUser(updatedUser);
+    addNotification({
+      type: 'gameResult',
+      winningTeam: homeScore > awayScore ? 'Orlando Magic' : awayScore > homeScore ? 'Brooklyn Nets' : 'Tie', // or 'Orlando Magic'
+      isNew: true, // You can set this manually or handle it in your addNotification function
+    });
+  };
+
+  // Function to add a notification
+  const addNotification = (notification: Omit<Notification, 'id'>) => {
+    const newNotification: Notification = {
+      id: notifications.length + 1, // Simple unique ID, you can make this more robust
+      ...notification,
+    };
+    setNotifications((prevState: any) => [...prevState, newNotification]);
+  };
+
+  // Function to mark a notification as read
+  const markAsRead = (ids: number[]) => {
+    setNotifications(notifications.map(n => (ids.includes(n.id) ? { ...n, isNew: false } : n)));
   };
 
   // Initialize the PubNub instance
@@ -576,6 +657,14 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
       initChat();
     }
   }, [chat, initChat]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    playByPlayRef.current = playbyplayState;
+  }, [playbyplayState])
 
   return (
     <PubNubConext.Provider
@@ -594,6 +683,7 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
         communities,
         activeChannel,
         yourCommunities,
+        notifications,
         createUser,
         createChannel,
         subscribeToGame,
@@ -601,11 +691,11 @@ export const PubNubContextProvider = ({ children }: { children: ReactNode }) => 
         submitPollResult,
         createPollChannel,
         subscribeToBetting,
-        subscribeToCoupon,
         placeBet,
         createCommunity,
         setActiveChannel,
-        getCommunities
+        getCommunities,
+        markAsRead
       }}
     >
       {children}

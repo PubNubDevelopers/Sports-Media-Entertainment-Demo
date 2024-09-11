@@ -211,7 +211,7 @@ export default function ChatComponent () {
         <ChatHeader
           precenseCount={presenceCount}
           onToggleSearch={toggleSearch}
-          chatRoomName={activeChannel?.name ?? "Chatroom"}
+          chatRoomName={activeChannel?.name?.replace(/_/g, " ") ?? "Chatroom"}
         />
       </div>
 

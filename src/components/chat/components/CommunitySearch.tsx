@@ -53,7 +53,7 @@ const CommunitySearch: React.FC<CommunitySearchProps> = ({ onJoinCommunity }) =>
               key={index}
               className="p-4 mb-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition flex justify-between items-center"
             >
-              <span className="text-white font-medium">{community.name || "Unnamed Community"}</span>
+              <span className="text-white font-medium">{(community.name || "Unnamed Community").replace(/_/g, " ")}</span>
               <button
                 onClick={() => onJoinCommunity(community)}
                 className="text-blue-500 hover:underline transition"

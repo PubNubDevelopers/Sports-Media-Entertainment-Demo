@@ -37,16 +37,21 @@ const BettingComponent: React.FC = () => {
   const userCoupon = user?.custom?.coupon;
 
   useEffect(() => {
-    // Sort the sportsBookData by the largest differential in moneylines
-    const sortedOdds = Object.keys(sportsBookData)
-      .map((sportsbook) => ({
-        Sportsbook: sportsbook,
-        ...sportsBookData[sportsbook],
-      }))
-      .sort((a, b) => Math.abs(b.HomeMoneyLine - b.AwayMoneyLine) - Math.abs(a.HomeMoneyLine - a.AwayMoneyLine));
+    try {
+      // Sort the sportsBookData by the largest differential in moneylines
+      const sortedOdds = Object.keys(sportsBookData)
+        .map((sportsbook) => ({
+          Sportsbook: sportsbook,
+          ...sportsBookData[sportsbook],
+        }))
+        .filter((odd: Odd) => odd.HomeMoneyLine !== undefined && odd.AwayMoneyLine !== undefined) // Filter undefined values
+        .sort((a, b) => Math.abs(b.HomeMoneyLine - b.AwayMoneyLine) - Math.abs(a.HomeMoneyLine - a.AwayMoneyLine));
 
-    // Show only 3 sportsbooks initially
-    setDisplayedOdds(sortedOdds.slice(0, 3));
+      // Show only 3 sportsbooks initially
+      setDisplayedOdds(sortedOdds.slice(0, 3));
+    } catch (error) {
+      console.error("Error processing sportsbook data:", error);
+    }
   }, [sportsBookData]);
 
   const handleBetSelection = (odd: Odd) => {

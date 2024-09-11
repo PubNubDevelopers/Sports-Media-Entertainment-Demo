@@ -4,10 +4,12 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import ProfileMenu from './ProfileMenu'; // Import the ProfileMenu component
 import CreateCommunityModal from './CreateCommunityModal'; // Import the new CreateCommunityModal component
+import NotificationMenu from './notifications/NotificationMenu';
 
 const Header: React.FC = () => {
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
   const [isCommunityModalOpen, setCommunityModalOpen] = useState(false);
+  const [isNotificationMenuOpen, setNotificationMenuOpen] = useState(false);
 
   const toggleProfileMenu = () => {
     setProfileMenuOpen(!isProfileMenuOpen);
@@ -15,6 +17,10 @@ const Header: React.FC = () => {
 
   const toggleCommunityModal = () => {
     setCommunityModalOpen(!isCommunityModalOpen);
+  };
+
+  const toggleNotificationMenu = () => {
+    setNotificationMenuOpen(!isNotificationMenuOpen);
   };
 
   return (
@@ -32,7 +38,7 @@ const Header: React.FC = () => {
             Create Community
           </button>
           <div className="flex items-center space-x-2">
-            <button className="relative">
+            <button onClick={toggleNotificationMenu} className="relative">
               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
               <Image src="/icons/PubNub/notifications_none.svg" alt="Notifications" width={20} height={20} />
             </button>
@@ -47,6 +53,7 @@ const Header: React.FC = () => {
       </div>
 
       {isProfileMenuOpen && <ProfileMenu onClose={toggleProfileMenu} />}
+      {isNotificationMenuOpen && <NotificationMenu onClose={toggleNotificationMenu} />}
       {isCommunityModalOpen && <CreateCommunityModal onClose={toggleCommunityModal} />}
     </>
   );

@@ -72,14 +72,14 @@ const GameNavBar: React.FC = () => {
             More
           </a>
         </div>
-        <div className="flex space-x-2 sm:space-x-4 mt-2 sm:mt-0">
+        {/* <div className="flex space-x-2 sm:space-x-4 mt-2 sm:mt-0">
           <button className="bg-blue-600 px-3 py-1 rounded-lg text-xs sm:text-sm text-white">
             Dropping Odds
           </button>
           <button>
             <Image src="/icons/PubNub/settings.svg" alt="Profile" width={20} height={20} />
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

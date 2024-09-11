@@ -200,24 +200,24 @@ const ProfileMenu: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="px-4 mt-8">
           <h4 className="text-md text-gray-400 mb-2">Your Communities</h4>
           <div className="space-y-4">
-            {yourCommunities.length > 0 ? (
-              yourCommunities.map((community, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-700 p-4 rounded-lg shadow-md flex justify-between items-center"
+          {yourCommunities.length > 0 ? (
+            yourCommunities.map((community, index) => (
+              <div
+                key={index}
+                className="bg-gray-700 p-4 rounded-lg shadow-md flex justify-between items-center"
+              >
+                <span className="text-white">{(community.name || "Unnamed Community").replace(/_/g, " ")}</span> {/* Replace underscores with spaces */}
+                <button
+                  onClick={() => handleJoinCommunity(community)}
+                  className="text-blue-500 hover:underline transition"
                 >
-                  <span className="text-white">{community.name}</span>
-                  <button
-                    onClick={() => handleJoinCommunity(community)}
-                    className="text-blue-500 hover:underline transition"
-                  >
-                    Join
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500">You are not part of any communities yet.</p>
-            )}
+                  Join
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500">You are not part of any communities yet.</p>
+          )}
           </div>
         </div>
 
