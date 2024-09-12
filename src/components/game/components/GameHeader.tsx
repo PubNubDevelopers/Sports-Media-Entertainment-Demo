@@ -11,6 +11,7 @@ const GameHeader: React.FC = () => {
   const [seconds, setSeconds] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false); // State to control if the clock should be paused
   const [showTimeout, setShowTimeout] = useState<boolean>(false); // State for displaying timeout
+  const [follow, setFollow] = useState(false);
 
   useEffect(() => {
     // When play-by-play state updates, set the initial time
@@ -103,8 +104,13 @@ const GameHeader: React.FC = () => {
         <span className="text-gray-400">-</span>
         <span className="text-white">{awayTeamScore}</span>
       </div>
-      <button className="bg-blue-600 px-3 py-1.5 rounded-lg text-xs sm:text-sm text-white">
-        Follow Event
+      <button
+        onClick={() => setFollow(!follow)} // Toggle follow state on click
+        className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm text-white transition-colors duration-300 ${
+          follow ? 'bg-gray-600' : 'bg-blue-600'
+        }`}
+        >
+        {follow ? 'Following' : 'Follow Event'}
       </button>
     </div>
   );

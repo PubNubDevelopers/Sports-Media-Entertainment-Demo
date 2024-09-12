@@ -46,7 +46,7 @@ const CommunitySearch: React.FC<CommunitySearchProps> = ({ onJoinCommunity }) =>
       </div>
 
       {/* Community List */}
-      <div className="flex-grow overflow-y-auto custom-scrollbar">
+      <div className="flex-grow overflow-y-auto custom-scrollbar h-[400px]">
         {filteredCommunities.length > 0 ? (
           filteredCommunities.map((community, index) => (
             <div

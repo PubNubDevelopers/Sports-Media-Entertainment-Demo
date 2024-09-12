@@ -34,3 +34,10 @@ body {
   opacity: 0;
   transition: opacity 300ms;
 }
+
+@media (max-width: 640px) {
+  .flex.space-x-4.mb-8 div {
+    width: 80px;
+    height: 80px;
+  }
+}

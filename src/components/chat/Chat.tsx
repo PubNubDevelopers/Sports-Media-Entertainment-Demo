@@ -62,6 +62,8 @@ export default function ChatComponent () {
         setCanChat(true);
       }
 
+      console.log("Joining Message Stream");
+
       // Join channel, able to listen to incoming messages
       await activeChannel.join((message: Message) => {
         // Cache the stored user if a new user has sent a message
