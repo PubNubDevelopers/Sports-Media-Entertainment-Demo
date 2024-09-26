@@ -30,12 +30,6 @@ const sendMessage = async (channel, message) => {
 };
 
 const sendTextMessage = async (channel, textMessage) => {
-  console.log("Sending message");
-  console.log(textMessage);
-
-  console.log("Sending message in channel");
-  console.log(channel.id);
-  console.log(channel.name);
   try {
     await channel.sendText(textMessage), {
       storeInHistory: true
