@@ -1,14 +1,14 @@
 const { Chat } = require("@pubnub/chat");
 const { simulateGame } = require('./simulateGame');
 const { simulatePreGameBetting } = require('./simulatePreBetting');
-const { createChannel } = require('./utils');
+const { createChannel } = require('../utils');
 require('dotenv').config();
 
-const main = async () => {
+const sportsMediaEntertainmentSim = async () => {
   const chat = await Chat.init({
-    publishKey: process.env.PUBNUB_PUBLISH_KEY,  // Loaded from .env
-    subscribeKey: process.env.PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
-    secretKey: process.env.PUBNUB_SECRET_KEY,  // Loaded from .env
+    publishKey: process.env.SPORTS_PUBNUB_PUBLISH_KEY,  // Loaded from .env
+    subscribeKey: process.env.SPORTS_PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
+    secretKey: process.env.SPORTS_PUBNUB_SECRET_KEY,  // Loaded from .env
     userId: "SIM"
   });
 
@@ -39,4 +39,4 @@ const main = async () => {
   await simulateGame(channel);
 }
 
-main();
+module.exports = { sportsMediaEntertainmentSim };

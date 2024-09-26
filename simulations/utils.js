@@ -2,7 +2,7 @@ const PubNub = require('pubnub');
 require('dotenv').config();
 
 const pubnub = new PubNub({
-  publishKey: process.env.PUBNUB_PUBLISH_KEY,  // Loaded from .env
+  publishKey: process.env.SPORTS_PUBNUB_PUBLISH_KEY,  // Loaded from .env
     subscribeKey: process.env.PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
     secretKey: process.env.PUBNUB_SECRET_KEY,  // Loaded from .env
     userId: "SIM"
@@ -29,6 +29,23 @@ const sendMessage = async (channel, message) => {
   }
 };
 
+const sendTextMessage = async (channel, textMessage) => {
+  console.log("Sending message");
+  console.log(textMessage);
+
+  console.log("Sending message in channel");
+  console.log(channel.id);
+  console.log(channel.name);
+  try {
+    await channel.sendText(textMessage), {
+      storeInHistory: true
+    };
+  }
+  catch(e){
+    console.log("Publish failed: ", e);
+  }
+}
+
 const createChannel = async (chat, id) => {
   try {
     channel = await chat.createPublicConversation({ channelId: id });
@@ -40,4 +57,4 @@ const createChannel = async (chat, id) => {
   return channel;
 }
 
-module.exports = { PromiseTimeout, sendMessage, createChannel };
+module.exports = { PromiseTimeout, sendMessage, sendTextMessage, createChannel };

@@ -28,7 +28,7 @@ const YoutubeVideoComponent = () => {
 
       // Destroy the player during intermission to "remove" it from view
       if (playerRef.current) {
-        console.log("Destroying player during intermission");
+        // console.log("Destroying player during intermission");
         playerRef.current.destroy();
         playerRef.current = null; // Set to null so we can re-initialize later
         setIsPlayerInitialized(false); // Mark player as uninitialized
@@ -49,7 +49,7 @@ const YoutubeVideoComponent = () => {
     // Re-create the YouTube player after the countdown finishes and intermission ends
     if (!isIntermission && countdown === 0 && playerContainerRef.current && !isPlayerInitialized) {
       if (latestPlay?.videoTimeMinutes !== undefined && latestPlay?.videoTimeSeconds !== undefined) {
-        console.log('Initializing player with:', latestPlay.videoTimeMinutes, latestPlay.videoTimeSeconds);
+        // console.log('Initializing player with:', latestPlay.videoTimeMinutes, latestPlay.videoTimeSeconds);
         initializePlayer(latestPlay.videoTimeMinutes, latestPlay.videoTimeSeconds);
       }
 
@@ -63,7 +63,7 @@ const YoutubeVideoComponent = () => {
     const startTimeInSeconds = videoTimeMinutes * 60 + videoTimeSeconds;
 
     if (playerContainerRef.current) {
-      console.log('Creating new YT Player at:', startTimeInSeconds);
+      // console.log('Creating new YT Player at:', startTimeInSeconds);
       playerRef.current = new (window as any).YT.Player(playerContainerRef.current, {
         videoId: '4Pc01w1n9Mg',
         playerVars: {
@@ -88,7 +88,7 @@ const YoutubeVideoComponent = () => {
   const onPlayerReady = () => {
     playerRef.current.setVolume(0);
     setIsPlayerReady(true); // Player is ready
-    console.log('Player ready, calling syncVideoWithGameState');
+    // console.log('Player ready, calling syncVideoWithGameState');
     syncVideoWithGameState();  // Ensure this is called
   };
 
@@ -123,8 +123,8 @@ const YoutubeVideoComponent = () => {
       const currentVideoMinutes = Math.floor(currentVideoTime / 60);
       const playByPlayMinutes = latestPlay.videoTimeMinutes;
 
-      console.log('currentVideoMinutes:', currentVideoMinutes);
-      console.log('playByPlayMinutes:', playByPlayMinutes);
+      // console.log('currentVideoMinutes:', currentVideoMinutes);
+      // console.log('playByPlayMinutes:', playByPlayMinutes);
 
       // Sync only if there is a minute difference and sync has not already been performed
       if (
@@ -134,7 +134,7 @@ const YoutubeVideoComponent = () => {
           Math.abs(currentVideoMinutes - playByPlayMinutes) >= 1) // Sync if the minute difference is 1 or more
       ) {
         try {
-          console.log('Syncing video to', startTimeInSeconds);
+          // console.log('Syncing video to', startTimeInSeconds);
           playerRef.current.seekTo(startTimeInSeconds, true);
           playerRef.current.playVideo(); // Ensure video is playing
         } catch (error) {
@@ -158,11 +158,11 @@ const YoutubeVideoComponent = () => {
         const scriptTag = document.createElement('script');
         scriptTag.src = 'https://www.youtube.com/iframe_api';
         document.body.appendChild(scriptTag);
-        console.log('YouTube API script added');
+        // console.log('YouTube API script added');
       } else {
         const latestPlay = playbyplayState?.[playbyplayState.length - 1];
         if (latestPlay?.videoTimeMinutes !== undefined && latestPlay?.videoTimeSeconds !== undefined) {
-          console.log('Calling initializePlayer with:', latestPlay.videoTimeMinutes, latestPlay.videoTimeSeconds);
+          // console.log('Calling initializePlayer with:', latestPlay.videoTimeMinutes, latestPlay.videoTimeSeconds);
           initializePlayer(latestPlay.videoTimeMinutes, latestPlay.videoTimeSeconds);
         }
       }
@@ -171,7 +171,7 @@ const YoutubeVideoComponent = () => {
     loadYouTubeIframeAPI();
 
     const syncInterval = setInterval(() => {
-      console.log('Calling syncVideoWithGameState from interval');
+      // console.log('Calling syncVideoWithGameState from interval');
       syncVideoWithGameState();
     }, 10000);
 

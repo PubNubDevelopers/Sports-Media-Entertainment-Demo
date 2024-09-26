@@ -1,6 +1,6 @@
 const { Chat } = require("@pubnub/chat");
 const { simulateGame } = require('./simulateGame');
-const { createChannel } = require('./utils'); // assuming createChannel is in utils.js
+const { createChannel } = require('../utils'); // assuming createChannel is in utils.js
 
 const main = async () => {
   const chat = await Chat.init({

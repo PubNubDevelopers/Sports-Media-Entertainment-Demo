@@ -1,8 +1,8 @@
 const fs = require('fs');
-const { PromiseTimeout, sendMessage } = require('./utils');
+const { PromiseTimeout, sendMessage } = require('../utils');
 
 const simulateGame = async (channel) => {
-  const gameData = JSON.parse(fs.readFileSync('nets_vs_magic_2022/Play by Play_Nets_Magic_3.15.2022.json', 'utf8'));
+  const gameData = JSON.parse(fs.readFileSync('sports-media-entertainment-server-demo/nets_vs_magic_2022/Play by Play_Nets_Magic_3.15.2022.json', 'utf8'));
   const plays = gameData['Plays'];
   const homeID = gameData['Game']['HomeTeamID'];
   const awayID = gameData['Game']['AwayTeamID'];

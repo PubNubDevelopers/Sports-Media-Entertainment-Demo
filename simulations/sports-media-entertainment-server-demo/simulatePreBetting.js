@@ -1,8 +1,8 @@
 const fs = require('fs');
-const { PromiseTimeout, sendMessage } = require('./utils');
+const { PromiseTimeout, sendMessage } = require('../utils');
 
 const simulatePreGameBetting = async (bettingChannel) => {
-  const preGameBettingData = JSON.parse(fs.readFileSync('nets_vs_magic_2022/Pre-Game Line Movement_ Nets_Magin_3.15.2022.json', 'utf8'));
+  const preGameBettingData = JSON.parse(fs.readFileSync('sports-media-entertainment-server-demo/nets_vs_magic_2022/Pre-Game Line Movement_ Nets_Magin_3.15.2022.json', 'utf8'));
 
   // Organize all sportsbooks data at the beginning
   const organizedData = preGameBettingData.map(game => {
