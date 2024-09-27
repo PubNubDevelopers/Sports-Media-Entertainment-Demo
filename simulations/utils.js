@@ -3,10 +3,17 @@ require('dotenv').config();
 
 const pubnub = new PubNub({
   publishKey: process.env.SPORTS_PUBNUB_PUBLISH_KEY,  // Loaded from .env
-    subscribeKey: process.env.PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
-    secretKey: process.env.PUBNUB_SECRET_KEY,  // Loaded from .env
-    userId: "SIM"
+  subscribeKey: process.env.PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
+  secretKey: process.env.PUBNUB_SECRET_KEY,  // Loaded from .env
+  userId: "SIM"
 });
+
+const lyraPubNub = new PubNub({
+  publishKey: process.env.LYRA_PUBNUB_PUBLISH_KEY,  // Loaded from .env
+  subscribeKey: process.env.LYRA_PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
+  secretKey: process.env.LYRA_PUBNUB_SECRET_KEY,  // Loaded from .env
+  userId: "player_sim"
+})
 
 function PromiseTimeout(delayms) {
   return new Promise(function (resolve, reject) {
@@ -40,6 +47,20 @@ const sendTextMessage = async (channel, textMessage) => {
   }
 }
 
+const sendBaseSDKMessage = async (channel, message) => {
+  try{
+    await lyraPubNub.publish({
+      channel: channel.id,
+      message: message,
+      storeInHistory: true
+    });
+  }
+  catch(error){
+    console.log("Publish failed: ", error);
+  }
+
+}
+
 const createChannel = async (chat, id) => {
   try {
     channel = await chat.createPublicConversation({ channelId: id });
@@ -51,4 +72,4 @@ const createChannel = async (chat, id) => {
   return channel;
 }
 
-module.exports = { PromiseTimeout, sendMessage, sendTextMessage, createChannel };
+module.exports = { PromiseTimeout, sendMessage, sendTextMessage, createChannel, sendBaseSDKMessage };

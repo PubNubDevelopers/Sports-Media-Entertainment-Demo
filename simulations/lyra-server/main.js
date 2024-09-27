@@ -1,6 +1,5 @@
-const { Chat } = require("@pubnub/chat");
-const { createChannel } = require('../utils');
 const { simulateMessages } = require('./simulateMessages');
+const { simulateGameData } = require('./simulateGameData');
 require('dotenv').config();
 
 const lyraSim = async () => {
@@ -8,6 +7,7 @@ const lyraSim = async () => {
 
   console.log("Simulating messages");
   simulateMessages(channelId);
+  simulateGameData()
 }
 
 module.exports = { lyraSim }
