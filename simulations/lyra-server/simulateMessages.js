@@ -1,12 +1,48 @@
 const { PromiseTimeout, sendMessage, sendTextMessage } = require('../utils');
-const OpenAI = require('openai');
 const { Chat } = require("@pubnub/chat");
+const PubNub = require('pubnub');
+const AWS = require('aws-sdk');
 require('dotenv').config();
 const fs = require('fs');
 
-// Initialize OpenAI with GPT-4
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Ensure API key is loaded from .env
+// Configure AWS Translate
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION, // E.g., "us-west-2"
+});
+
+// Initialize AWS Translate
+const translate = new AWS.Translate();
+
+const pubnub = new PubNub({
+  publishKey: process.env.LYRA_PUBNUB_PUBLISH_KEY,
+  subscribeKey: process.env.LYRA_PUBNUB_SUBSCRIBE_KEY,
+  secretKey: process.env.LYRA_PUBNUB_SECRET_KEY,
+  userId: "Subscriber" // Use the userId from the message
+});
+
+// Variable to store the current language
+let currentLanguage = 'en'; // Default language
+
+// Subscribe to the "language-change" channel
+pubnub.subscribe({
+  channels: ['language-change']
+});
+
+// Listen for messages on the channel
+pubnub.addListener({
+  message: function (event) {
+    // Check the channel of the incoming message and direct it to the appropriate handler
+    if (event.channel === 'language-change') {
+      handleLanguageChangeMessage(event.message);
+    }
+  },
+  status: function (statusEvent) {
+    if (statusEvent.category === "PNConnectedCategory") {
+      console.log('Subscribed to channels: "language-change"');
+    }
+  }
 });
 
 // File to store messages
@@ -21,9 +57,34 @@ const loadMessages = () => {
   return [];
 };
 
+// Function to handle incoming messages on the "language-change" channel
+const handleLanguageChangeMessage = (message) => {
+  console.log("RECEIVED MESSAGE OBJECT: ", message);
+
+  // Update the current language based on the incoming message
+  currentLanguage = message;
+  console.log(`Language changed to: ${currentLanguage}`);
+};
+
+// Function to translate a message using AWS Translate
+const translateMessage = async (message, targetLanguage) => {
+  const params = {
+    SourceLanguageCode: 'auto', // Automatically detect the source language
+    TargetLanguageCode: targetLanguage, // Use the target language from the event
+    Text: message
+  };
+
+  try {
+    const data = await translate.translateText(params).promise();
+    return data.TranslatedText;
+  } catch (error) {
+    console.error("Error translating message:", error);
+    return message; // Return the original message in case of an error
+  }
+};
+
 // Function to simulate sending messages from JSON file
 const simulateMessages = async (channelId) => {
-  console.log("Loading messages from JSON");
 
   const messages = loadMessages();
 
@@ -35,12 +96,9 @@ const simulateMessages = async (channelId) => {
   // Infinite loop to simulate continuous chat
   let index = 0;
   while (true) {
-    console.log("Looping through saved messages");
 
     try {
       const messageData = messages[index];
-
-      console.log(`Sending message from user: ${messageData.userId}`);
 
       // Create a new Chat instance for the current user
       const chat = await Chat.init({
@@ -50,17 +108,20 @@ const simulateMessages = async (channelId) => {
         userId: messageData.userId // Use the userId from the message
       });
 
+
+
       // Get the channel object
       let channel = await chat.getChannel(channelId);
 
       if (!channel) {
-        console.log("Creating new channel");
         channel = await createChannel(chat, channelId); // Create the channel if it doesn't exist
       }
 
-      // Send the message to the channel
-      await sendTextMessage(channel, messageData.message);
-      console.log(`Message sent by ${messageData.name}: ${messageData.message}`);
+      // Translate the message based on the current language
+      const translatedMessage = await translateMessage(messageData.message, currentLanguage);
+
+      // Send the translated message to the channel
+      await sendTextMessage(channel, translatedMessage);
 
       // Introduce random delay between messages to simulate natural chat behavior
       const randomDelay = Math.floor(Math.random() * 5000) + 2000; // Random delay between 2-7 seconds
