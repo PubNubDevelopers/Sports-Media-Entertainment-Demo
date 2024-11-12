@@ -3,8 +3,8 @@ require('dotenv').config();
 
 const pubnub = new PubNub({
   publishKey: process.env.SPORTS_PUBNUB_PUBLISH_KEY,  // Loaded from .env
-  subscribeKey: process.env.PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
-  secretKey: process.env.PUBNUB_SECRET_KEY,  // Loaded from .env
+  subscribeKey: process.env.SPORTS_PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
+  secretKey: process.env.SPORTS_PUBNUB_SECRET_KEY,  // Loaded from .env
   userId: "SIM"
 });
 
