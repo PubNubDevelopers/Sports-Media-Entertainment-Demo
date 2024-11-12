@@ -2,7 +2,7 @@ const { sportsMediaEntertainmentSim } = require('./sports-media-entertainment-se
 const { lyraSim } = require('./lyra-server/main');
 
 const main = async () => {
-  // sportsMediaEntertainmentSim();
+  sportsMediaEntertainmentSim();
   lyraSim();
 }
 
