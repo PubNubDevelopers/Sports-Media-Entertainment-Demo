@@ -2,6 +2,7 @@ const { PromiseTimeout, sendMessage, sendTextMessage } = require('../utils');
 const { Chat } = require("@pubnub/chat");
 const PubNub = require('pubnub');
 const AWS = require('aws-sdk');
+const { createChannel } = require('../utils');
 require('dotenv').config();
 const fs = require('fs');
 
