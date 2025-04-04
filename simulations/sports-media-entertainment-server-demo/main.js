@@ -5,6 +5,7 @@ const { createChannel } = require('../utils');
 require('dotenv').config();
 
 const sportsMediaEntertainmentSim = async () => {
+  console.log("Sports Media Entertainment SIM");
   const chat = await Chat.init({
     publishKey: process.env.SPORTS_PUBNUB_PUBLISH_KEY,  // Loaded from .env
     subscribeKey: process.env.SPORTS_PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env

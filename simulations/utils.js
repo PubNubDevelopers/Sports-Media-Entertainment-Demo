@@ -8,6 +8,12 @@ const pubnub = new PubNub({
   userId: "SIM"
 });
 
+const pubnubSales = new PubNub({
+  publishKey: process.env.SPORTS_SALES_PUBLISH_KEY,
+  subscribeKey: process.env.SPORTS_SALES_SUBSCRIBE_KEY,
+  userId: "SIM"
+})
+
 const lyraPubNub = new PubNub({
   publishKey: process.env.LYRA_PUBNUB_PUBLISH_KEY,  // Loaded from .env
   subscribeKey: process.env.LYRA_PUBNUB_SUBSCRIBE_KEY,  // Loaded from .env
@@ -27,6 +33,11 @@ const sendMessage = async (channel, message) => {
       channel: channel.id, // the channel name
       message: message,
       storeInHistory: true // option to store the message in history
+    });
+    await pubnubSales.publish({
+      channel: channel.id,
+      message: message,
+      storeInHistory: true
     });
     await channel.sendText(JSON.stringify(message), {
       storeInHistory: true
